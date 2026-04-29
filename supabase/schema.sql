@@ -1,0 +1,210 @@
+create extension if not exists "pgcrypto";
+
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  username text not null unique check (username ~ '^[a-z0-9_]{3,24}$'),
+  display_name text not null check (char_length(display_name) between 1 and 40),
+  avatar_url text,
+  bio text check (char_length(coalesce(bio, '')) <= 240),
+  location text check (char_length(coalesce(location, '')) <= 40),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.pets (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references public.profiles(id) on delete cascade,
+  name text not null check (char_length(name) between 1 and 40),
+  species text not null check (char_length(species) between 1 and 24),
+  breed text check (char_length(coalesce(breed, '')) <= 40),
+  birthday date,
+  gender text check (char_length(coalesce(gender, '')) <= 20),
+  avatar_url text,
+  bio text check (char_length(coalesce(bio, '')) <= 240),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.posts (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null references public.profiles(id) on delete cascade,
+  pet_id uuid references public.pets(id) on delete set null,
+  body text not null check (char_length(body) between 2 and 1000),
+  image_urls text[] not null default '{}',
+  visibility text not null default 'public' check (visibility in ('public', 'followers')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.comments (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.posts(id) on delete cascade,
+  author_id uuid not null references public.profiles(id) on delete cascade,
+  body text not null check (char_length(body) between 1 and 500),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.likes (
+  post_id uuid not null references public.posts(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (post_id, user_id)
+);
+
+create table if not exists public.follows (
+  follower_id uuid not null references public.profiles(id) on delete cascade,
+  following_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (follower_id, following_id),
+  check (follower_id <> following_id)
+);
+
+create table if not exists public.topics (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null unique check (slug ~ '^[a-z0-9-]{2,48}$'),
+  name text not null unique check (char_length(name) between 1 and 32),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.post_topics (
+  post_id uuid not null references public.posts(id) on delete cascade,
+  topic_id uuid not null references public.topics(id) on delete cascade,
+  primary key (post_id, topic_id)
+);
+
+create index if not exists posts_author_created_idx on public.posts(author_id, created_at desc);
+create index if not exists posts_pet_created_idx on public.posts(pet_id, created_at desc);
+create index if not exists comments_post_created_idx on public.comments(post_id, created_at);
+create index if not exists follows_following_idx on public.follows(following_id);
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_set_updated_at on public.profiles;
+create trigger profiles_set_updated_at
+before update on public.profiles
+for each row execute function public.set_updated_at();
+
+drop trigger if exists pets_set_updated_at on public.pets;
+create trigger pets_set_updated_at
+before update on public.pets
+for each row execute function public.set_updated_at();
+
+drop trigger if exists posts_set_updated_at on public.posts;
+create trigger posts_set_updated_at
+before update on public.posts
+for each row execute function public.set_updated_at();
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  base_username text;
+begin
+  base_username := lower(regexp_replace(coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)), '[^a-z0-9_]', '', 'g'));
+
+  if char_length(base_username) < 3 then
+    base_username := 'pet' || substr(replace(new.id::text, '-', ''), 1, 8);
+  end if;
+
+  insert into public.profiles (id, username, display_name)
+  values (
+    new.id,
+    left(base_username, 24),
+    coalesce(nullif(new.raw_user_meta_data->>'display_name', ''), left(base_username, 24))
+  )
+  on conflict (id) do nothing;
+
+  return new;
+exception
+  when unique_violation then
+    insert into public.profiles (id, username, display_name)
+    values (
+      new.id,
+      'pet' || substr(replace(new.id::text, '-', ''), 1, 8),
+      coalesce(nullif(new.raw_user_meta_data->>'display_name', ''), 'Petly 用户')
+    )
+    on conflict (id) do nothing;
+    return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function public.handle_new_user();
+
+alter table public.profiles enable row level security;
+alter table public.pets enable row level security;
+alter table public.posts enable row level security;
+alter table public.comments enable row level security;
+alter table public.likes enable row level security;
+alter table public.follows enable row level security;
+alter table public.topics enable row level security;
+alter table public.post_topics enable row level security;
+
+create policy "Profiles are public" on public.profiles for select using (true);
+create policy "Users insert own profile" on public.profiles for insert with check (auth.uid() = id);
+create policy "Users update own profile" on public.profiles for update using (auth.uid() = id) with check (auth.uid() = id);
+
+create policy "Pets are public" on public.pets for select using (true);
+create policy "Users insert own pets" on public.pets for insert with check (auth.uid() = owner_id);
+create policy "Users update own pets" on public.pets for update using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "Users delete own pets" on public.pets for delete using (auth.uid() = owner_id);
+
+create policy "Public posts are readable" on public.posts for select using (visibility = 'public');
+create policy "Users insert own posts" on public.posts for insert with check (auth.uid() = author_id);
+create policy "Users update own posts" on public.posts for update using (auth.uid() = author_id) with check (auth.uid() = author_id);
+create policy "Users delete own posts" on public.posts for delete using (auth.uid() = author_id);
+
+create policy "Comments are public" on public.comments for select using (true);
+create policy "Users insert own comments" on public.comments for insert with check (auth.uid() = author_id);
+create policy "Users delete own comments" on public.comments for delete using (auth.uid() = author_id);
+
+create policy "Likes are public" on public.likes for select using (true);
+create policy "Users manage own likes insert" on public.likes for insert with check (auth.uid() = user_id);
+create policy "Users manage own likes delete" on public.likes for delete using (auth.uid() = user_id);
+
+create policy "Follows are public" on public.follows for select using (true);
+create policy "Users follow as self" on public.follows for insert with check (auth.uid() = follower_id);
+create policy "Users unfollow as self" on public.follows for delete using (auth.uid() = follower_id);
+
+create policy "Topics are public" on public.topics for select using (true);
+create policy "Post topics are public" on public.post_topics for select using (true);
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'pet-media',
+  'pet-media',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+create policy "Pet media is public" on storage.objects for select using (bucket_id = 'pet-media');
+create policy "Users upload own media" on storage.objects for insert with check (
+  bucket_id = 'pet-media'
+  and auth.uid()::text = (storage.foldername(name))[1]
+);
+create policy "Users update own media" on storage.objects for update using (
+  bucket_id = 'pet-media'
+  and auth.uid()::text = (storage.foldername(name))[1]
+);
+create policy "Users delete own media" on storage.objects for delete using (
+  bucket_id = 'pet-media'
+  and auth.uid()::text = (storage.foldername(name))[1]
+);

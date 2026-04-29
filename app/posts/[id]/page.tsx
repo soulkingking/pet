@@ -1,0 +1,79 @@
+import { notFound } from "next/navigation";
+import { createComment, deleteComment } from "@/app/actions";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { PostCard } from "@/components/post-card";
+import { getComments, getPost, getSessionUser } from "@/lib/queries";
+
+export default async function PostDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const [post, comments, user] = await Promise.all([
+    getPost(id),
+    getComments(id),
+    getSessionUser(),
+  ]);
+
+  if (!post) {
+    notFound();
+  }
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-4">
+      <PostCard post={post} />
+      <Card>
+        <CardHeader>
+          <CardTitle>评论</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {user ? (
+            <form action={createComment.bind(null, id)} className="space-y-3">
+              <Textarea name="body" placeholder="写下你的回应" required />
+              <Button>发送评论</Button>
+            </form>
+          ) : (
+            <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+              登录后可以参与评论。
+            </p>
+          )}
+
+          <div className="space-y-4">
+            {comments.map((comment) => (
+              <div key={comment.id} className="flex gap-3 border-t pt-4">
+                <Avatar>
+                  <AvatarImage
+                    src={comment.profiles?.avatar_url ?? undefined}
+                    alt={comment.profiles?.display_name ?? ""}
+                  />
+                  <AvatarFallback>
+                    {comment.profiles?.display_name?.slice(0, 1) ?? "P"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold">
+                      {comment.profiles?.display_name ?? "宠友"}
+                    </p>
+                    {user?.id === comment.author_id ? (
+                      <form action={deleteComment.bind(null, id, comment.id)}>
+                        <Button variant="ghost" size="sm">删除</Button>
+                      </form>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 whitespace-pre-line break-words text-sm leading-6">
+                    {comment.body}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
