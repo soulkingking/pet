@@ -3,8 +3,8 @@ import { AuthForm } from "@/components/auth-form";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; message?: string }>;
 }) {
-  const { error } = await searchParams;
-  return <AuthForm mode="login" error={error} />;
+  const { error, message } = await searchParams;
+  return <AuthForm mode="login" error={error} message={message} />;
 }

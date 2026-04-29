@@ -21,7 +21,7 @@ export default async function SearchPage({
     <div className="space-y-5">
       <form className="flex gap-2">
         <Input name="q" placeholder="搜索用户、宠物或动态" defaultValue={q} />
-        <Button>
+        <Button className="shrink-0 whitespace-nowrap px-4">
           <Search className="h-4 w-4" aria-hidden />
           搜索
         </Button>

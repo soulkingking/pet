@@ -74,12 +74,17 @@ create table if not exists public.post_topics (
 
 create index if not exists posts_author_created_idx on public.posts(author_id, created_at desc);
 create index if not exists posts_pet_created_idx on public.posts(pet_id, created_at desc);
+create index if not exists pets_owner_created_idx on public.pets(owner_id, created_at desc);
 create index if not exists comments_post_created_idx on public.comments(post_id, created_at);
+create index if not exists comments_author_created_idx on public.comments(author_id, created_at desc);
+create index if not exists likes_user_created_idx on public.likes(user_id, created_at desc);
 create index if not exists follows_following_idx on public.follows(following_id);
+create index if not exists post_topics_topic_idx on public.post_topics(topic_id);
 
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   new.updated_at = now();
@@ -144,6 +149,9 @@ create trigger on_auth_user_created
 after insert on auth.users
 for each row execute function public.handle_new_user();
 
+revoke execute on function public.handle_new_user() from public;
+revoke execute on function public.handle_new_user() from anon, authenticated;
+
 alter table public.profiles enable row level security;
 alter table public.pets enable row level security;
 alter table public.posts enable row level security;
@@ -154,30 +162,30 @@ alter table public.topics enable row level security;
 alter table public.post_topics enable row level security;
 
 create policy "Profiles are public" on public.profiles for select using (true);
-create policy "Users insert own profile" on public.profiles for insert with check (auth.uid() = id);
-create policy "Users update own profile" on public.profiles for update using (auth.uid() = id) with check (auth.uid() = id);
+create policy "Users insert own profile" on public.profiles for insert with check ((select auth.uid()) = id);
+create policy "Users update own profile" on public.profiles for update using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
 
 create policy "Pets are public" on public.pets for select using (true);
-create policy "Users insert own pets" on public.pets for insert with check (auth.uid() = owner_id);
-create policy "Users update own pets" on public.pets for update using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
-create policy "Users delete own pets" on public.pets for delete using (auth.uid() = owner_id);
+create policy "Users insert own pets" on public.pets for insert with check ((select auth.uid()) = owner_id);
+create policy "Users update own pets" on public.pets for update using ((select auth.uid()) = owner_id) with check ((select auth.uid()) = owner_id);
+create policy "Users delete own pets" on public.pets for delete using ((select auth.uid()) = owner_id);
 
 create policy "Public posts are readable" on public.posts for select using (visibility = 'public');
-create policy "Users insert own posts" on public.posts for insert with check (auth.uid() = author_id);
-create policy "Users update own posts" on public.posts for update using (auth.uid() = author_id) with check (auth.uid() = author_id);
-create policy "Users delete own posts" on public.posts for delete using (auth.uid() = author_id);
+create policy "Users insert own posts" on public.posts for insert with check ((select auth.uid()) = author_id);
+create policy "Users update own posts" on public.posts for update using ((select auth.uid()) = author_id) with check ((select auth.uid()) = author_id);
+create policy "Users delete own posts" on public.posts for delete using ((select auth.uid()) = author_id);
 
 create policy "Comments are public" on public.comments for select using (true);
-create policy "Users insert own comments" on public.comments for insert with check (auth.uid() = author_id);
-create policy "Users delete own comments" on public.comments for delete using (auth.uid() = author_id);
+create policy "Users insert own comments" on public.comments for insert with check ((select auth.uid()) = author_id);
+create policy "Users delete own comments" on public.comments for delete using ((select auth.uid()) = author_id);
 
 create policy "Likes are public" on public.likes for select using (true);
-create policy "Users manage own likes insert" on public.likes for insert with check (auth.uid() = user_id);
-create policy "Users manage own likes delete" on public.likes for delete using (auth.uid() = user_id);
+create policy "Users manage own likes insert" on public.likes for insert with check ((select auth.uid()) = user_id);
+create policy "Users manage own likes delete" on public.likes for delete using ((select auth.uid()) = user_id);
 
 create policy "Follows are public" on public.follows for select using (true);
-create policy "Users follow as self" on public.follows for insert with check (auth.uid() = follower_id);
-create policy "Users unfollow as self" on public.follows for delete using (auth.uid() = follower_id);
+create policy "Users follow as self" on public.follows for insert with check ((select auth.uid()) = follower_id);
+create policy "Users unfollow as self" on public.follows for delete using ((select auth.uid()) = follower_id);
 
 create policy "Topics are public" on public.topics for select using (true);
 create policy "Post topics are public" on public.post_topics for select using (true);
@@ -195,16 +203,15 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
-create policy "Pet media is public" on storage.objects for select using (bucket_id = 'pet-media');
 create policy "Users upload own media" on storage.objects for insert with check (
   bucket_id = 'pet-media'
-  and auth.uid()::text = (storage.foldername(name))[1]
+  and (select auth.uid())::text = (storage.foldername(name))[1]
 );
 create policy "Users update own media" on storage.objects for update using (
   bucket_id = 'pet-media'
-  and auth.uid()::text = (storage.foldername(name))[1]
+  and (select auth.uid())::text = (storage.foldername(name))[1]
 );
 create policy "Users delete own media" on storage.objects for delete using (
   bucket_id = 'pet-media'
-  and auth.uid()::text = (storage.foldername(name))[1]
+  and (select auth.uid())::text = (storage.foldername(name))[1]
 );

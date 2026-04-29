@@ -48,6 +48,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui"],
+        heading: ["var(--font-heading)", "var(--font-sans)", "ui-sans-serif", "system-ui"],
       },
     },
   },

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -15,9 +16,10 @@ export async function signIn(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    redirect(`/login?error=${encodeURIComponent(getAuthErrorMessage(error.message))}`);
   }
 
+  revalidatePath("/", "layout");
   redirect("/");
 }
 
@@ -32,6 +34,7 @@ export async function signUp(formData: FormData) {
     email,
     password,
     options: {
+      emailRedirectTo: `${await getRequestOrigin()}/auth/confirm?next=/settings`,
       data: {
         username,
         display_name: displayName,
@@ -40,7 +43,7 @@ export async function signUp(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/register?error=${encodeURIComponent(error.message)}`);
+    redirect(`/register?error=${encodeURIComponent(getAuthErrorMessage(error.message))}`);
   }
 
   if (data.user) {
@@ -51,7 +54,9 @@ export async function signUp(formData: FormData) {
     });
   }
 
-  redirect("/");
+  redirect(
+    `/login?message=${encodeURIComponent("注册成功，请先打开邮箱里的确认链接，然后再登录。")}`,
+  );
 }
 
 export async function signOut() {
@@ -302,4 +307,29 @@ function normalizeUsername(value: string) {
   }
 
   return username.slice(0, 24);
+}
+
+async function getRequestOrigin() {
+  const headerStore = await headers();
+  const origin = headerStore.get("origin");
+
+  if (origin) {
+    return origin;
+  }
+
+  const host = headerStore.get("host") ?? "localhost:3000";
+  const protocol = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
+  return `${protocol}://${host}`;
+}
+
+function getAuthErrorMessage(message: string) {
+  if (message.toLowerCase().includes("email not confirmed")) {
+    return "邮箱还没有确认，请先打开注册邮件里的确认链接。";
+  }
+
+  if (message.toLowerCase().includes("invalid login credentials")) {
+    return "邮箱或密码不正确。";
+  }
+
+  return message;
 }
