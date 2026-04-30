@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { Edit3, Heart, MessageCircle, PawPrint, Trash2 } from "lucide-react";
 import { deletePost, toggleLike } from "@/app/actions";
+import { DebouncedForm, DebouncedSubmitButton } from "@/components/debounced-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,10 +17,12 @@ export function PostCard({
   post,
   currentUserId,
   variant = "full",
+  showAllImages = false,
 }: {
   post: FeedPost;
   currentUserId?: string | null;
   variant?: PostCardVariant;
+  showAllImages?: boolean;
 }) {
   const author = post.profiles;
   const pet = post.pets;
@@ -26,78 +30,87 @@ export function PostCard({
   const isMasonry = variant === "masonry";
 
   if (isMasonry) {
+    const hasImages = post.image_urls.length > 0;
     return (
-      <Card className="group overflow-hidden border-slate-950/10 bg-white/95 shadow-[0_16px_38px_rgba(15,23,42,0.08)] hover:border-primary/35 hover:shadow-[0_24px_58px_rgba(37,99,235,0.13)]">
-        <CardContent className="p-0">
-          <MasonryImages post={post} />
+      <article
+        className={cn(
+          "group block w-full overflow-hidden rounded-[0.9rem] border-2 border-slate-950 bg-white p-1.5",
+          "shadow-[4px_4px_0_rgba(15,23,42,0.1)] transition duration-300",
+          "[transform:rotate(var(--pin-rotate))]",
+          "hover:[transform:translateY(-0.15rem)_rotate(0deg)] hover:shadow-[6px_6px_0_rgba(15,23,42,0.14)]",
+        )}
+        style={{ "--pin-rotate": getPinRotate(post.id) } as CSSProperties}
+      >
+        <MasonryImages post={post} />
 
-          <div className="space-y-3 p-3.5">
-            <div className="flex items-start gap-2.5">
-              <Link
-                href={author ? `/u/${author.username}` : "#"}
-                className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={author?.avatar_url ?? undefined} alt={author?.display_name ?? ""} />
-                  <AvatarFallback>{author?.display_name?.slice(0, 1) ?? "P"}</AvatarFallback>
-                </Avatar>
-              </Link>
-              <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <Link
-                    href={author ? `/u/${author.username}` : "#"}
-                    className="truncate text-sm font-black hover:text-primary"
-                  >
-                    {author?.display_name ?? "宠友"}
-                  </Link>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {formatPostDate(post.created_at)}
-                  </span>
-                </div>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  {pet ? (
-                    <Link
-                      href={`/pets/${pet.id}`}
-                      className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs font-bold text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
-                    >
-                      <PawPrint className="h-3 w-3" aria-hidden />
-                      {pet.name}
-                    </Link>
-                  ) : null}
-                  <span className="rounded-md bg-muted px-2 py-1 text-xs font-bold text-primary">
-                    {POST_TYPE_LABELS[post.post_type]}
-                  </span>
-                </div>
-              </div>
-            </div>
+        <div className={cn("space-y-1.5 px-1.5 pt-2 pb-1")}>
+          <Link
+            href={`/posts/${post.id}`}
+            className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <p
+              className={cn(
+                "line-clamp-2 whitespace-pre-line break-words font-black leading-snug tracking-tight text-foreground",
+                hasImages ? "text-[13.5px]" : "text-base",
+              )}
+            >
+              {post.body}
+            </p>
+          </Link>
 
-            <Link href={`/posts/${post.id}`} className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <p className={cn(
-                "whitespace-pre-line break-words text-[15px] font-semibold leading-7 text-foreground",
-                post.image_urls.length > 0 ? "line-clamp-4" : "line-clamp-6",
-              )}>
-                {post.body}
-              </p>
+          <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-muted-foreground">
+            <Link
+              href={author ? `/u/${author.username}` : "#"}
+              className="inline-flex items-center gap-1.5 rounded-full hover:text-primary"
+            >
+              <Avatar className="h-5 w-5">
+                <AvatarImage src={author?.avatar_url ?? undefined} alt={author?.display_name ?? ""} />
+                <AvatarFallback className="text-[10px]">
+                  {author?.display_name?.slice(0, 1) ?? "P"}
+                </AvatarFallback>
+              </Avatar>
+              <span className="truncate">{author?.display_name ?? "宠友"}</span>
             </Link>
-
-            {post.topics.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {post.topics.slice(0, 3).map((topic) => (
-                  <Link
-                    key={topic.id}
-                    href={`/topics/${topic.slug}`}
-                    className="motion-pop rounded-md bg-secondary/80 px-2 py-1 text-xs font-bold text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
-                  >
-                    #{topic.name}
-                  </Link>
-                ))}
-              </div>
+            {pet ? (
+              <>
+                <span aria-hidden className="text-muted-foreground/40">·</span>
+                <Link
+                  href={`/pets/${pet.id}`}
+                  className="inline-flex items-center gap-0.5 hover:text-primary"
+                >
+                  <PawPrint className="h-3 w-3" aria-hidden />
+                  {pet.name}
+                </Link>
+              </>
             ) : null}
+            <span aria-hidden className="text-muted-foreground/40">·</span>
+            <span>{formatPostDate(post.created_at)}</span>
           </div>
 
-          <PostActions post={post} canManage={canManage} compact />
-        </CardContent>
-      </Card>
+          {post.topics.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-primary">
+                {POST_TYPE_LABELS[post.post_type]}
+              </span>
+              {post.topics.slice(0, 3).map((topic) => (
+                <Link
+                  key={topic.id}
+                  href={`/topics/${topic.slug}`}
+                  className="motion-pop rounded-md bg-secondary/80 px-2 py-0.5 text-xs font-bold text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
+                >
+                  #{topic.name}
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <span className="inline-block rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-primary">
+              {POST_TYPE_LABELS[post.post_type]}
+            </span>
+          )}
+        </div>
+
+        <PostActions post={post} canManage={canManage} compact />
+      </article>
     );
   }
 
@@ -157,34 +170,63 @@ export function PostCard({
         </div>
 
         {post.image_urls.length > 0 ? (
-          <Link
-            href={`/posts/${post.id}`}
-            className="grid gap-1 px-4 pb-4"
-            style={{
-              gridTemplateColumns:
-                post.image_urls.length === 1 ? "1fr" : "repeat(2, minmax(0, 1fr))",
-            }}
-          >
-            {post.image_urls.slice(0, 4).map((url, index) => (
-              <div
-                key={url}
-                className="relative aspect-[4/3] overflow-hidden rounded-md bg-muted"
-              >
-                <Image
-                  src={url}
-                  alt={`动态图片 ${index + 1}`}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 620px"
-                  className="object-cover transition duration-500 hover:scale-105"
-                />
-              </div>
-            ))}
-          </Link>
+          <FullImages post={post} showAll={showAllImages} />
         ) : null}
 
         <PostActions post={post} canManage={canManage} />
       </CardContent>
     </Card>
+  );
+}
+
+function FullImages({ post, showAll }: { post: FeedPost; showAll: boolean }) {
+  const visible = showAll ? post.image_urls : post.image_urls.slice(0, 4);
+  const remaining = showAll ? 0 : post.image_urls.length - visible.length;
+  const isSingle = visible.length === 1;
+
+  const images = visible.map((url, index) => (
+        <div
+          key={url}
+          className={cn(
+            "relative overflow-hidden rounded-md bg-muted",
+            showAll && isSingle ? "aspect-auto" : "aspect-[4/3]",
+          )}
+        >
+          {showAll && isSingle ? (
+            <Image
+              src={url}
+              alt={`动态图片 ${index + 1}`}
+              width={1200}
+              height={800}
+              sizes="(max-width: 768px) 100vw, 620px"
+              className="h-auto w-full object-contain"
+            />
+          ) : (
+            <Image
+              src={url}
+              alt={`动态图片 ${index + 1}`}
+              fill
+              sizes="(max-width: 768px) 100vw, 620px"
+              className="object-cover transition duration-500 hover:scale-105"
+            />
+          )}
+          {!showAll && index === visible.length - 1 && remaining > 0 ? (
+            <span className="absolute inset-0 flex items-center justify-center bg-slate-950/52 text-xl font-black text-white">
+              +{remaining}
+            </span>
+          ) : null}
+        </div>
+  ));
+  const gridStyle = { gridTemplateColumns: isSingle ? "1fr" : "repeat(2, minmax(0, 1fr))" };
+
+  return showAll ? (
+    <div className="grid gap-1 px-4 pb-4" style={gridStyle}>
+      {images}
+    </div>
+  ) : (
+    <Link href={`/posts/${post.id}`} className="grid gap-1 px-4 pb-4" style={gridStyle}>
+      {images}
+    </Link>
   );
 }
 
@@ -198,8 +240,8 @@ function MasonryImages({ post }: { post: FeedPost }) {
 
   if (post.image_urls.length === 1) {
     return (
-      <Link href={`/posts/${post.id}`} className="block p-2 pb-0">
-        <div className={cn("relative overflow-hidden rounded-md bg-muted", getMasonryAspect(post.id))}>
+      <Link href={`/posts/${post.id}`} className="block">
+        <div className={cn("relative overflow-hidden rounded-[0.9rem] bg-muted", getMasonryAspect(post.id))}>
           <Image
             src={post.image_urls[0]}
             alt="动态图片 1"
@@ -213,23 +255,25 @@ function MasonryImages({ post }: { post: FeedPost }) {
   }
 
   return (
-    <Link href={`/posts/${post.id}`} className="grid grid-cols-2 gap-1 p-2 pb-0">
-      {visibleImages.map((url, index) => (
-        <div key={url} className="relative aspect-square overflow-hidden rounded-md bg-muted">
-          <Image
-            src={url}
-            alt={`动态图片 ${index + 1}`}
-            fill
-            sizes="(max-width: 640px) 50vw, 160px"
-            className="object-cover transition duration-500 group-hover:scale-105"
-          />
-          {index === 3 && remaining > 0 ? (
-            <span className="absolute inset-0 flex items-center justify-center bg-slate-950/52 text-lg font-black text-white">
-              +{remaining}
-            </span>
-          ) : null}
-        </div>
-      ))}
+    <Link href={`/posts/${post.id}`} className="block overflow-hidden rounded-[0.9rem]">
+      <div className="grid grid-cols-2 gap-0.5">
+        {visibleImages.map((url, index) => (
+          <div key={url} className="relative aspect-square overflow-hidden bg-muted">
+            <Image
+              src={url}
+              alt={`动态图片 ${index + 1}`}
+              fill
+              sizes="(max-width: 640px) 50vw, 160px"
+              className="object-cover transition duration-500 group-hover:scale-105"
+            />
+            {index === 3 && remaining > 0 ? (
+              <span className="absolute inset-0 flex items-center justify-center bg-slate-950/52 text-lg font-black text-white">
+                +{remaining}
+              </span>
+            ) : null}
+          </div>
+        ))}
+      </div>
     </Link>
   );
 }
@@ -244,20 +288,25 @@ function PostActions({
   compact?: boolean;
 }) {
   return (
-    <div className={cn("flex items-center justify-between border-t", compact ? "px-2.5 py-2" : "px-4 py-2")}>
-      <div className="flex items-center gap-1">
-        <form action={toggleLike.bind(null, post.id)}>
-          <Button
+    <div
+      className={cn(
+        "flex items-center justify-between",
+        compact ? "px-1 pt-1 pb-0.5" : "border-t px-4 py-2",
+      )}
+    >
+      <div className="flex items-center gap-0.5">
+        <DebouncedForm action={toggleLike.bind(null, post.id)}>
+          <DebouncedSubmitButton
             variant="ghost"
             size="sm"
-            className={cn("h-9 px-2.5", post.liked_by_me ? "text-accent" : "")}
+            className={cn("h-8 px-2 font-bold", post.liked_by_me ? "text-accent" : "")}
             aria-label="点赞动态"
           >
             <Heart className="h-4 w-4" fill={post.liked_by_me ? "currentColor" : "none"} aria-hidden />
             {formatCount(post.likes_count)}
-          </Button>
-        </form>
-        <Button asChild variant="ghost" size="sm" className="h-9 px-2.5">
+          </DebouncedSubmitButton>
+        </DebouncedForm>
+        <Button asChild variant="ghost" size="sm" className="h-8 px-2 font-bold">
           <Link href={`/posts/${post.id}`} aria-label="查看评论">
             <MessageCircle className="h-4 w-4" aria-hidden />
             {formatCount(post.comments_count)}
@@ -265,19 +314,19 @@ function PostActions({
         </Button>
       </div>
       {canManage ? (
-        <div className="flex items-center gap-1">
-          <Button asChild variant="ghost" size="sm" title="编辑动态" className="h-9 px-2.5">
+        <div className="flex items-center gap-0.5">
+          <Button asChild variant="ghost" size="sm" title="编辑动态" className="h-8 px-2">
             <Link href={`/posts/${post.id}/edit`} aria-label="编辑动态">
               <Edit3 className="h-4 w-4" aria-hidden />
               {compact ? <span className="sr-only">编辑</span> : "编辑"}
             </Link>
           </Button>
-          <form action={deletePost.bind(null, post.id)}>
-            <Button variant="ghost" size="sm" title="删除动态" className="h-9 px-2.5" aria-label="删除动态">
+          <DebouncedForm action={deletePost.bind(null, post.id)}>
+            <DebouncedSubmitButton variant="ghost" size="sm" title="删除动态" className="h-8 px-2" aria-label="删除动态">
               <Trash2 className="h-4 w-4" aria-hidden />
               {compact ? <span className="sr-only">删除</span> : "删除"}
-            </Button>
-          </form>
+            </DebouncedSubmitButton>
+          </DebouncedForm>
         </div>
       ) : null}
     </div>
@@ -288,6 +337,12 @@ function getMasonryAspect(id: string) {
   const score = Array.from(id).reduce((total, char) => total + char.charCodeAt(0), 0);
   const aspects = ["aspect-[4/5]", "aspect-square", "aspect-[5/4]", "aspect-[3/4]"];
   return aspects[score % aspects.length];
+}
+
+function getPinRotate(id: string) {
+  const score = Array.from(id).reduce((total, char) => total + char.charCodeAt(0), 0);
+  const rotations = ["-1.4deg", "1.1deg", "-0.7deg", "0.9deg", "-1.7deg", "1.5deg"];
+  return rotations[score % rotations.length];
 }
 
 function formatPostDate(value: string) {

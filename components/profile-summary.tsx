@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MapPin, Sparkles } from "lucide-react";
+import { DebouncedForm, DebouncedSubmitButton } from "@/components/debounced-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,11 +61,15 @@ export function ProfileSummary({
               <Link href="/settings">编辑资料</Link>
             </Button>
           ) : (
-            <form action={toggleFollow.bind(null, profile.id, profile.username)}>
-              <Button variant={profile.is_following ? "outline" : "default"} className={profile.is_following ? "bg-white/86" : ""}>
+            <DebouncedForm action={toggleFollow.bind(null, profile.id, profile.username)}>
+              <DebouncedSubmitButton
+                variant={profile.is_following ? "outline" : "default"}
+                className={profile.is_following ? "bg-white/86" : ""}
+                pendingLabel="处理中..."
+              >
                 {profile.is_following ? "已关注" : "关注"}
-              </Button>
-            </form>
+              </DebouncedSubmitButton>
+            </DebouncedForm>
           )}
         </div>
         <div className="mt-5 grid grid-cols-3 gap-2 rounded-lg border border-white/80 bg-white/72 p-2 text-center shadow-sm backdrop-blur sm:max-w-md">

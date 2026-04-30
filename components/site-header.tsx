@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactElement } from "react";
 import { Bell, Cat, Globe2, LogOut, Plus, Search, Settings } from "lucide-react";
 import { signOut } from "@/app/actions";
+import { DebouncedForm, DebouncedSubmitButton } from "@/components/debounced-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -85,11 +86,11 @@ export function SiteHeader({
                   <AvatarFallback>{profile.display_name.slice(0, 1)}</AvatarFallback>
                 </Avatar>
               </Link>
-              <form action={signOut}>
-                <Button variant="ghost" size="icon" title="退出">
+              <DebouncedForm action={signOut}>
+                <DebouncedSubmitButton variant="ghost" size="icon" title="退出" aria-label="退出">
                   <LogOut className="h-4 w-4" aria-hidden />
-                </Button>
-              </form>
+                </DebouncedSubmitButton>
+              </DebouncedForm>
             </>
           ) : (
             <>

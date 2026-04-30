@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, ImagePlus, Send, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { DebouncedForm, DebouncedSubmitButton } from "@/components/debounced-form";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -113,7 +113,7 @@ export function ComposeForm({
   }
 
   return (
-    <form action={action} className="space-y-5 pt-5">
+    <DebouncedForm action={action} className="space-y-5 pt-5">
       <div className="space-y-2">
         <Label htmlFor="body" className="text-sm font-bold">
           今天发生了什么？
@@ -276,11 +276,11 @@ export function ComposeForm({
         <p className="text-xs leading-5 text-muted-foreground">
           发布后会显示在社区动态中，可以继续在评论里补充细节。
         </p>
-        <Button variant="accent" className="h-11 px-5">
+        <DebouncedSubmitButton variant="accent" className="h-11 px-5" pendingLabel="提交中...">
           <Send className="h-4 w-4" aria-hidden />
           {submitLabel}
-        </Button>
+        </DebouncedSubmitButton>
       </div>
-    </form>
+    </DebouncedForm>
   );
 }

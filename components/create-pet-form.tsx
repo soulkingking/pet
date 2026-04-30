@@ -1,6 +1,6 @@
 import { createPet } from "@/app/actions";
 import { CalendarDays, Camera, PawPrint, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { DebouncedForm, DebouncedSubmitButton } from "@/components/debounced-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +36,7 @@ export function CreatePetForm({
         </p>
       </CardHeader>
       <CardContent className="p-5">
-        <form action={action} className="grid gap-4">
+        <DebouncedForm action={action} className="grid gap-4">
           <Label className="grid gap-2">
             <span className="text-sm font-bold text-secondary-foreground">名字</span>
             <Input name="name" defaultValue={pet?.name} placeholder="例如：Momo" required className="h-12 rounded-lg bg-white/90" />
@@ -75,8 +75,13 @@ export function CreatePetForm({
             <span className="text-sm font-bold text-secondary-foreground">小故事</span>
             <Textarea name="bio" defaultValue={pet?.bio ?? ""} placeholder="它的性格、习惯或最可爱的一刻" className="min-h-28 rounded-lg bg-white/90" />
           </Label>
-          <Button className="h-12 rounded-lg shadow-[0_14px_26px_rgba(37,99,235,0.22)]">{submitLabel}</Button>
-        </form>
+          <DebouncedSubmitButton
+            className="h-12 rounded-lg shadow-[0_14px_26px_rgba(37,99,235,0.22)]"
+            pendingLabel="保存中..."
+          >
+            {submitLabel}
+          </DebouncedSubmitButton>
+        </DebouncedForm>
       </CardContent>
     </Card>
   );

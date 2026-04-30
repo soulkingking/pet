@@ -3,9 +3,9 @@ import { Camera, MapPin, PawPrint, PenLine, Sparkles, UserRound, type LucideIcon
 import type { ReactNode } from "react";
 import { saveProfile } from "@/app/actions";
 import { CreatePetForm } from "@/components/create-pet-form";
+import { DebouncedForm, DebouncedSubmitButton } from "@/components/debounced-form";
 import { PetCard } from "@/components/pet-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,7 +82,7 @@ export default async function SettingsPage({
             <CardTitle className="text-xl">个人资料</CardTitle>
           </CardHeader>
           <CardContent className="p-5">
-            <form action={saveProfile} className="space-y-5">
+            <DebouncedForm action={saveProfile} className="space-y-5">
               <div className="grid gap-3 sm:grid-cols-2">
                 <ProfileField label="昵称" icon={UserRound}>
                   <Input
@@ -112,8 +112,13 @@ export default async function SettingsPage({
               <ProfileField label="简介" icon={PenLine}>
                 <Textarea name="bio" placeholder="介绍你和你的宠物" defaultValue={profile?.bio ?? ""} className="min-h-32 rounded-lg bg-white/90" />
               </ProfileField>
-              <Button className="h-12 rounded-lg px-6 shadow-[0_14px_28px_rgba(37,99,235,0.24)]">保存资料</Button>
-            </form>
+              <DebouncedSubmitButton
+                className="h-12 rounded-lg px-6 shadow-[0_14px_28px_rgba(37,99,235,0.24)]"
+                pendingLabel="保存中..."
+              >
+                保存资料
+              </DebouncedSubmitButton>
+            </DebouncedForm>
           </CardContent>
         </Card>
 

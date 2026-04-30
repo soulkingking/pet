@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createComment, deleteComment } from "@/app/actions";
+import { DebouncedForm, DebouncedSubmitButton } from "@/components/debounced-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,17 +27,17 @@ export default async function PostDetailPage({
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <PostCard post={post} currentUserId={user?.id} />
+      <PostCard post={post} currentUserId={user?.id} showAllImages />
       <Card>
         <CardHeader>
           <CardTitle>评论</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           {user ? (
-            <form action={createComment.bind(null, id)} className="space-y-3">
+            <DebouncedForm action={createComment.bind(null, id)} className="space-y-3">
               <Textarea name="body" placeholder="写下你的回应" required />
-              <Button>发送评论</Button>
-            </form>
+              <DebouncedSubmitButton pendingLabel="发送中...">发送评论</DebouncedSubmitButton>
+            </DebouncedForm>
           ) : (
             <div className="flex flex-col gap-3 rounded-md bg-muted p-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">登录后可以参与评论，向作者补充经验或提问。</p>
@@ -74,9 +75,11 @@ export default async function PostDetailPage({
                       </p>
                     </div>
                     {user?.id === comment.author_id ? (
-                      <form action={deleteComment.bind(null, id, comment.id)}>
-                        <Button variant="ghost" size="sm">删除</Button>
-                      </form>
+                      <DebouncedForm action={deleteComment.bind(null, id, comment.id)}>
+                        <DebouncedSubmitButton variant="ghost" size="sm" pendingLabel="删除中...">
+                          删除
+                        </DebouncedSubmitButton>
+                      </DebouncedForm>
                     ) : null}
                   </div>
                   <p className="mt-1 whitespace-pre-line break-words text-sm leading-6">

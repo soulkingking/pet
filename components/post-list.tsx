@@ -52,9 +52,9 @@ export function PostList({
   }
 
   return (
-    <div className={cn("stagger-children columns-1 gap-4 sm:columns-2 xl:columns-3", className)}>
+    <div className={cn("stagger-children columns-2 gap-3 lg:columns-3", className)}>
       {posts.map((post) => (
-        <div key={post.id} className="mb-4 inline-block w-full break-inside-avoid">
+        <div key={post.id} className="mb-3 inline-block w-full break-inside-avoid px-0.5">
           <PostCard post={post} currentUserId={currentUserId} variant="masonry" />
         </div>
       ))}

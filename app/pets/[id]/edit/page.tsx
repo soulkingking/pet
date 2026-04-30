@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { deletePet, updatePet } from "@/app/actions";
 import { CreatePetForm } from "@/components/create-pet-form";
-import { Button } from "@/components/ui/button";
+import { DebouncedForm, DebouncedSubmitButton } from "@/components/debounced-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPet, getSessionUser } from "@/lib/queries";
 
@@ -48,11 +48,11 @@ export default async function EditPetPage({
           <p className="text-sm leading-6 text-muted-foreground">
             删除后宠物档案会移除，已经发布过的动态会保留，并自动清空关联宠物。
           </p>
-          <form action={deletePet.bind(null, id)}>
-            <Button variant="destructive" className="w-full">
+          <DebouncedForm action={deletePet.bind(null, id)}>
+            <DebouncedSubmitButton variant="destructive" className="w-full" pendingLabel="删除中...">
               删除宠物档案
-            </Button>
-          </form>
+            </DebouncedSubmitButton>
+          </DebouncedForm>
         </CardContent>
       </Card>
     </div>

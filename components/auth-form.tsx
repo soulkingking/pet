@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Camera, HeartHandshake, LockKeyhole, Mail, PawPrint, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { signIn, signUp } from "@/app/actions";
-import { Button } from "@/components/ui/button";
+import { DebouncedForm, DebouncedSubmitButton } from "@/components/debounced-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -80,7 +80,7 @@ export function AuthForm({
           </p>
         </div>
 
-        <form action={isLogin ? signIn : signUp} className="mt-6 space-y-4">
+        <DebouncedForm action={isLogin ? signIn : signUp} className="mt-6 space-y-4">
             {!isLogin ? (
               <>
                 <Label className="block space-y-2">
@@ -123,8 +123,10 @@ export function AuthForm({
                 {error}
               </p>
             ) : null}
-            <Button className="h-11 w-full">{isLogin ? "登录" : "注册"}</Button>
-        </form>
+            <DebouncedSubmitButton className="h-11 w-full" pendingLabel={isLogin ? "登录中..." : "注册中..."}>
+              {isLogin ? "登录" : "注册"}
+            </DebouncedSubmitButton>
+        </DebouncedForm>
 
         <p className="mt-5 text-center text-sm text-muted-foreground">
           {isLogin ? "还没有账号？" : "已经有账号？"}

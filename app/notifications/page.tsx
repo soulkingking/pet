@@ -2,8 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bell, CheckCheck, Heart, MessageCircle, UserPlus } from "lucide-react";
 import { markAllNotificationsRead, markNotificationRead } from "@/app/actions";
+import { DebouncedForm, DebouncedSubmitButton } from "@/components/debounced-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { getNotifications, getSessionUser } from "@/lib/queries";
@@ -30,12 +30,12 @@ export default async function NotificationsPage() {
             <p className="mt-1 text-sm text-muted-foreground">站内通知会记录点赞、评论和关注。</p>
           </div>
           {hasUnread ? (
-            <form action={markAllNotificationsRead}>
-              <Button variant="outline">
+            <DebouncedForm action={markAllNotificationsRead}>
+              <DebouncedSubmitButton variant="outline" pendingLabel="处理中...">
                 <CheckCheck className="h-4 w-4" aria-hidden />
                 全部已读
-              </Button>
-            </form>
+              </DebouncedSubmitButton>
+            </DebouncedForm>
           ) : null}
         </CardHeader>
       </Card>
@@ -90,11 +90,11 @@ export default async function NotificationsPage() {
                     </Link>
                   ) : null}
                   {!notification.read_at ? (
-                    <form action={markNotificationRead.bind(null, notification.id)} className="mt-3">
-                      <Button variant="outline" size="sm">
+                    <DebouncedForm action={markNotificationRead.bind(null, notification.id)} className="mt-3">
+                      <DebouncedSubmitButton variant="outline" size="sm" pendingLabel="处理中...">
                         标为已读
-                      </Button>
-                    </form>
+                      </DebouncedSubmitButton>
+                    </DebouncedForm>
                   ) : null}
                 </div>
               </CardContent>
