@@ -32,17 +32,20 @@ export default async function PetPage({
 
   return (
     <div className="space-y-5">
-      <Card>
-        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-          <Avatar className="h-24 w-24 rounded-md">
+      <Card className="relative isolate overflow-hidden border-primary/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(239,246,255,0.9)_48%,rgba(255,247,237,0.78))] shadow-[0_24px_70px_rgba(37,99,235,0.12)]">
+        <div className="absolute right-6 top-6 -z-10 h-28 w-28 rounded-full bg-accent/15 blur-2xl" />
+        <div className="absolute bottom-0 left-10 -z-10 h-24 w-24 rounded-full bg-primary/12 blur-2xl" />
+        <CardContent className="flex flex-col gap-5 p-5 sm:flex-row sm:items-end sm:p-6">
+          <Avatar className="h-28 w-28 rounded-lg border-4 border-white shadow-[0_16px_34px_rgba(15,23,42,0.14)]">
             <AvatarImage src={pet.avatar_url ?? undefined} alt={pet.name} />
-            <AvatarFallback>
+            <AvatarFallback className="bg-secondary text-primary">
               <PawPrint className="h-8 w-8" aria-hidden />
             </AvatarFallback>
           </Avatar>
-          <div>
-            <h1 className="text-3xl font-bold">{pet.name}</h1>
-            <p className="mt-1 text-muted-foreground">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black text-accent">Pet timeline</p>
+            <h1 className="mt-1 truncate text-3xl font-black tracking-tight text-primary">{pet.name}</h1>
+            <p className="mt-2 text-sm font-bold text-muted-foreground">
               {pet.species}
               {pet.breed ? ` · ${pet.breed}` : ""}
               {pet.gender ? ` · ${pet.gender}` : ""}
@@ -56,10 +59,14 @@ export default async function PetPage({
                 主人：{pet.profiles.display_name}
               </Link>
             ) : null}
-            {pet.bio ? <p className="mt-3 leading-7">{pet.bio}</p> : null}
+            {pet.bio ? (
+              <p className="mt-3 max-w-2xl rounded-lg bg-white/72 p-3 text-sm leading-7 text-secondary-foreground">
+                {pet.bio}
+              </p>
+            ) : null}
           </div>
           {isOwner ? (
-            <Button asChild variant="outline" className="sm:ml-auto">
+            <Button asChild variant="outline" className="bg-white/86 sm:ml-auto">
               <Link href={`/pets/${pet.id}/edit`}>
                 <Edit3 className="h-4 w-4" aria-hidden />
                 编辑档案
@@ -71,7 +78,8 @@ export default async function PetPage({
       <section className="space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold">成长时间线</h2>
+            <p className="text-sm font-black text-accent">Growth board</p>
+            <h2 className="text-xl font-black text-primary">成长时间线</h2>
             <p className="text-sm text-muted-foreground">
               基于关联到 {pet.name} 的动态生成，删除宠物后历史动态会保留但不再出现在这里。
             </p>
@@ -117,7 +125,8 @@ function FilterLink({
   return (
     <Link
       href={href}
-      className={`rounded-md px-3 py-2 text-sm font-bold transition ${
+      aria-current={active ? "page" : undefined}
+      className={`inline-flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-bold transition ${
         active
           ? "bg-primary text-primary-foreground"
           : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"

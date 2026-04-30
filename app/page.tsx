@@ -40,7 +40,7 @@ export default async function Home({
         <section className="relative isolate overflow-hidden rounded-lg border bg-card shadow-[0_22px_60px_rgba(30,64,175,0.12)]">
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_12%_18%,rgba(249,115,22,0.16),transparent_30%),radial-gradient(circle_at_82%_18%,rgba(37,99,235,0.18),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(239,246,255,0.82))]" />
           <div className="grid gap-6 p-5 sm:p-6 md:grid-cols-[minmax(0,1.05fr)_minmax(260px,0.95fr)] md:items-center">
-            <div className="max-w-2xl">
+            <div className="stagger-children max-w-2xl">
               <p className="inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-sm font-bold text-accent shadow-sm">
                 <Sparkles className="h-4 w-4" aria-hidden />
                 宠物社区
@@ -53,7 +53,7 @@ export default async function Home({
               </p>
               <div className="mt-5 flex flex-wrap gap-2 text-sm font-bold text-secondary-foreground">
                 {["照片日记", "同城宠友", "散步灵感"].map((label) => (
-                  <span key={label} className="rounded-md bg-secondary px-3 py-2">
+                  <span key={label} className="motion-pop rounded-md bg-secondary px-3 py-2">
                     {label}
                   </span>
                 ))}
@@ -75,7 +75,7 @@ export default async function Home({
             </div>
 
             <div className="relative min-h-56 md:min-h-72">
-              <div className="absolute right-0 top-0 h-44 w-44 overflow-hidden rounded-lg border-4 border-card bg-secondary shadow-[0_18px_44px_rgba(15,23,42,0.14)] sm:h-52 sm:w-52">
+              <div className="hero-image-one absolute right-0 top-0 h-44 w-44 overflow-hidden rounded-lg border-4 border-card bg-secondary shadow-[0_18px_44px_rgba(15,23,42,0.14)] sm:h-52 sm:w-52">
                 <Image
                   src="/official/cat-diary.png"
                   alt="猫咪日记照片"
@@ -85,7 +85,7 @@ export default async function Home({
                   className="object-cover"
                 />
               </div>
-              <div className="absolute bottom-0 left-0 h-36 w-48 overflow-hidden rounded-lg border-4 border-card bg-muted shadow-[0_18px_44px_rgba(15,23,42,0.12)] sm:h-44 sm:w-60">
+              <div className="hero-image-two absolute bottom-0 left-0 h-36 w-48 overflow-hidden rounded-lg border-4 border-card bg-muted shadow-[0_18px_44px_rgba(15,23,42,0.12)] sm:h-44 sm:w-60">
                 <Image
                   src="/official/community-meetup.png"
                   alt="宠友社区聚会照片"
@@ -94,7 +94,7 @@ export default async function Home({
                   className="object-cover"
                 />
               </div>
-              <div className="absolute bottom-6 right-8 flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm font-bold text-primary shadow-[0_16px_30px_rgba(37,99,235,0.16)]">
+              <div className="hero-note absolute bottom-6 right-8 flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm font-bold text-primary shadow-[0_16px_30px_rgba(37,99,235,0.16)]">
                 <Camera className="h-4 w-4" aria-hidden />
                 留住这一刻
               </div>
@@ -103,6 +103,21 @@ export default async function Home({
         </section>
 
         <FeedTabs mode={mode} />
+
+        <div className="flex flex-col gap-3 rounded-lg border border-primary/10 bg-white/78 p-4 shadow-[0_16px_38px_rgba(37,99,235,0.08)] backdrop-blur sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-black text-accent">Community board</p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight text-primary">
+              {mode === "following" ? "关注宠友的最新瞬间" : "正在发生的小爪印"}
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              图片、话题和照护片段会自然排成一面可逛的宠物生活墙。
+            </p>
+          </div>
+          <span className="w-fit rounded-full bg-secondary px-3 py-1 text-sm font-bold text-primary">
+            {posts.length} 条动态
+          </span>
+        </div>
 
         <PostList
           posts={posts}
@@ -120,7 +135,7 @@ export default async function Home({
         />
       </section>
 
-      <aside className="space-y-4">
+      <aside className="stagger-children space-y-4 lg:sticky lg:top-24">
         <Card>
           <CardHeader>
             <CardTitle>热门话题</CardTitle>
@@ -130,7 +145,7 @@ export default async function Home({
               <Link
                 key={topic.slug}
                 href={`/topics/${topic.slug}`}
-                className="rounded-md bg-secondary px-3 py-2 text-sm font-bold text-secondary-foreground transition duration-200 hover:-translate-y-0.5 hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="motion-pop rounded-md bg-secondary px-3 py-2 text-sm font-bold text-secondary-foreground transition duration-200 hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 #{topic.name}
               </Link>
@@ -143,7 +158,7 @@ export default async function Home({
           </CardHeader>
           <CardContent className="space-y-3">
             {communityNotes.map(({ icon: Icon, title, text }) => (
-              <div key={title} className="flex gap-3 rounded-lg bg-muted/70 p-3">
+              <div key={title} className="motion-pop flex gap-3 rounded-lg bg-muted/70 p-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-card text-primary">
                   <Icon className="h-4 w-4" aria-hidden />
                 </span>
