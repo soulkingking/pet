@@ -47,7 +47,9 @@ export function SiteHeader({
                 <Link href="/notifications" className="relative">
                   <Bell className="h-4 w-4" aria-hidden />
                   {unreadNotifications > 0 ? (
-                    <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-accent" />
+                    <span className="absolute -right-1 -top-1 min-h-4 min-w-4 rounded-full bg-accent px-1 text-center text-[10px] font-bold leading-4 text-accent-foreground">
+                      {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                    </span>
                   ) : null}
                 </Link>
               </Button>

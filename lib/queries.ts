@@ -102,7 +102,8 @@ export async function getPostsByIds(ids: string[]) {
     .select(
       "id, body, post_type, image_urls, created_at, updated_at, author_id, pet_id, profiles(id, username, display_name, avatar_url), pets(id, name, species, avatar_url), post_topics(topics(id, slug, name))",
     )
-    .in("id", ids);
+    .in("id", ids)
+    .order("created_at", { ascending: false });
   return hydratePosts(posts ?? [], user?.id);
 }
 
