@@ -61,7 +61,7 @@ export async function getFeed(mode: "recommended" | "following" = "recommended")
   let query = supabase
     .from("posts")
     .select(
-      "id, body, post_type, image_urls, created_at, updated_at, author_id, pet_id, profiles(id, username, display_name, avatar_url), pets(id, name, species, avatar_url), post_topics(topics(id, slug, name))",
+      "id, body, post_type, image_urls, created_at, updated_at, author_id, pet_id, profiles!posts_author_id_fkey(id, username, display_name, avatar_url), pets!posts_pet_id_fkey(id, name, species, avatar_url), post_topics(topics(id, slug, name))",
     )
     .eq("visibility", "public")
     .order("created_at", { ascending: false })
@@ -100,7 +100,7 @@ export async function getPostsByIds(ids: string[]) {
   const { data: posts } = await supabase
     .from("posts")
     .select(
-      "id, body, post_type, image_urls, created_at, updated_at, author_id, pet_id, profiles(id, username, display_name, avatar_url), pets(id, name, species, avatar_url), post_topics(topics(id, slug, name))",
+      "id, body, post_type, image_urls, created_at, updated_at, author_id, pet_id, profiles!posts_author_id_fkey(id, username, display_name, avatar_url), pets!posts_pet_id_fkey(id, name, species, avatar_url), post_topics(topics(id, slug, name))",
     )
     .in("id", ids)
     .order("created_at", { ascending: false });
