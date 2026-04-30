@@ -38,9 +38,9 @@ export function AuthForm({
             : "创建账号后就能发布宠物日常、收藏有用经验，并让宠友认识你家的毛孩子。"}
         </p>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="stagger-children mt-6 grid gap-3 sm:grid-cols-3">
           {highlights.map((highlight) => (
-            <div key={highlight} className="rounded-lg border bg-card/78 p-3 shadow-sm">
+            <div key={highlight} className="motion-pop rounded-lg border bg-card/78 p-3 shadow-sm">
               <PawPrint className="h-5 w-5 text-accent" aria-hidden />
               <p className="mt-2 text-sm font-bold text-secondary-foreground">{highlight}</p>
             </div>
@@ -54,12 +54,12 @@ export function AuthForm({
             </span>
             <div>
               <h2 className="font-heading text-lg font-bold">
-                {isLogin ? "账号会话安全保存" : "注册后先确认邮箱"}
+                {isLogin ? "账号会话安全保存" : "注册后即可开始"}
               </h2>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
                 {isLogin
                   ? "Petly 使用 Supabase Auth 处理登录会话，页面只接收必要的登录结果。"
-                  : "提交注册后，请打开邮箱确认链接，再回到登录页继续使用。"}
+                  : "提交注册后先完善资料；如果后续开启邮箱确认，系统会提示你先完成邮箱验证。"}
               </p>
             </div>
           </div>

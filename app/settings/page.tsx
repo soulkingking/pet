@@ -67,6 +67,12 @@ export default async function SettingsPage({
           </p>
         </section>
 
+        {error ? (
+          <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive">
+            {error}
+          </p>
+        ) : null}
+
         <Card className="overflow-hidden border-primary/10 bg-white/90 shadow-[0_22px_56px_rgba(30,64,175,0.1)] backdrop-blur">
           <CardHeader className="border-b border-primary/10 bg-[linear-gradient(90deg,rgba(239,246,255,0.9),rgba(255,255,255,0.92))]">
             <p className="inline-flex w-fit items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs font-bold text-accent">
@@ -106,7 +112,6 @@ export default async function SettingsPage({
               <ProfileField label="简介" icon={PenLine}>
                 <Textarea name="bio" placeholder="介绍你和你的宠物" defaultValue={profile?.bio ?? ""} className="min-h-32 rounded-lg bg-white/90" />
               </ProfileField>
-              {error ? <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm font-bold text-destructive">{error}</p> : null}
               <Button className="h-12 rounded-lg px-6 shadow-[0_14px_28px_rgba(37,99,235,0.24)]">保存资料</Button>
             </form>
           </CardContent>
@@ -134,7 +139,9 @@ export default async function SettingsPage({
           </div>
         </section>
       </section>
-      <CreatePetForm />
+      <div id="add-pet" className="scroll-mt-24">
+        <CreatePetForm />
+      </div>
     </div>
   );
 }

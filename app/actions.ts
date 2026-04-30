@@ -56,6 +56,11 @@ export async function signUp(formData: FormData) {
     });
   }
 
+  if (data.session) {
+    revalidatePath("/", "layout");
+    redirect("/settings");
+  }
+
   redirect(
     `/login?message=${encodeURIComponent("注册成功，请先打开邮箱里的确认链接，然后再登录。")}`,
   );
@@ -80,7 +85,11 @@ export async function createPost(formData: FormData) {
     redirect("/compose?error=动态内容至少需要 2 个字");
   }
 
-  const imageUrls = await uploadImages(supabase, user.id, formData.getAll("images"));
+  const imageUrls = await uploadImages(supabase, user.id, formData.getAll("images"), {
+    folder: "posts",
+    errorPath: "/compose",
+    maxFiles: 6,
+  });
 
   const { data, error } = await supabase
     .from("posts")
@@ -290,8 +299,24 @@ export async function saveProfile(formData: FormData) {
   const displayName = String(formData.get("displayName") ?? "").trim();
   const bio = String(formData.get("bio") ?? "").trim() || null;
   const location = String(formData.get("location") ?? "").trim() || null;
-  const avatar = formData.get("avatar");
-  const avatarUrls = await uploadImages(supabase, user.id, avatar ? [avatar] : [], "avatars");
+
+  if (displayName.length > 40) {
+    redirect("/settings?error=昵称不能超过 40 个字");
+  }
+
+  if (bio && bio.length > 240) {
+    redirect("/settings?error=简介不能超过 240 个字");
+  }
+
+  if (location && location.length > 40) {
+    redirect("/settings?error=城市不能超过 40 个字");
+  }
+
+  const avatarUrls = await uploadImages(supabase, user.id, [formData.get("avatar")], {
+    folder: "avatars",
+    errorPath: "/settings",
+    maxFiles: 1,
+  });
 
   const { error } = await supabase.from("profiles").upsert({
     id: user.id,
@@ -303,67 +328,73 @@ export async function saveProfile(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/settings?error=${encodeURIComponent(error.message)}`);
+    redirect(`/settings?error=${encodeURIComponent(getDatabaseErrorMessage(error.message))}`);
   }
 
   revalidatePath("/");
+  revalidatePath("/settings");
   redirect(`/u/${username}`);
 }
 
 export async function createPet(formData: FormData) {
   const supabase = await requireSupabase();
   const user = await requireUser(supabase);
-  const avatar = formData.get("avatar");
-  const avatarUrls = await uploadImages(supabase, user.id, avatar ? [avatar] : [], "pets");
+  const petInput = getPetInput(formData, "/settings");
+  const avatarUrls = await uploadImages(supabase, user.id, [formData.get("avatar")], {
+    folder: "pets",
+    errorPath: "/settings",
+    maxFiles: 1,
+  });
 
   const { data, error } = await supabase
     .from("pets")
     .insert({
       owner_id: user.id,
-      name: String(formData.get("name") ?? "").trim(),
-      species: String(formData.get("species") ?? "").trim() || "猫猫",
-      breed: String(formData.get("breed") ?? "").trim() || null,
-      birthday: String(formData.get("birthday") ?? "") || null,
-      gender: String(formData.get("gender") ?? "") || null,
-      bio: String(formData.get("bio") ?? "").trim() || null,
+      ...petInput,
       avatar_url: avatarUrls[0] ?? null,
     })
     .select("id")
     .single();
 
   if (error || !data) {
-    redirect(`/settings?error=${encodeURIComponent(error?.message ?? "创建宠物失败")}`);
+    redirect(
+      `/settings?error=${encodeURIComponent(
+        error ? getDatabaseErrorMessage(error.message) : "创建宠物失败",
+      )}`,
+    );
   }
 
   revalidatePath("/");
+  revalidatePath("/settings");
   redirect(`/pets/${data.id}`);
 }
 
 export async function updatePet(petId: string, formData: FormData) {
   const supabase = await requireSupabase();
   const user = await requireUser(supabase);
-  const avatar = formData.get("avatar");
-  const avatarUrls = await uploadImages(supabase, user.id, avatar ? [avatar] : [], "pets");
+  const errorPath = `/pets/${petId}/edit`;
+  const petInput = getPetInput(formData, errorPath);
+  const avatarUrls = await uploadImages(supabase, user.id, [formData.get("avatar")], {
+    folder: "pets",
+    errorPath,
+    maxFiles: 1,
+  });
 
   const { error } = await supabase
     .from("pets")
     .update({
-      name: String(formData.get("name") ?? "").trim(),
-      species: String(formData.get("species") ?? "").trim() || "猫猫",
-      breed: String(formData.get("breed") ?? "").trim() || null,
-      birthday: String(formData.get("birthday") ?? "") || null,
-      gender: String(formData.get("gender") ?? "") || null,
-      bio: String(formData.get("bio") ?? "").trim() || null,
+      ...petInput,
       ...(avatarUrls[0] ? { avatar_url: avatarUrls[0] } : {}),
     })
     .eq("id", petId)
     .eq("owner_id", user.id);
 
   if (error) {
-    redirect(`/pets/${petId}/edit?error=${encodeURIComponent(error.message)}`);
+    redirect(`${errorPath}?error=${encodeURIComponent(getDatabaseErrorMessage(error.message))}`);
   }
 
   revalidatePath(`/pets/${petId}`);
+  revalidatePath("/settings");
   redirect(`/pets/${petId}`);
 }
 
@@ -409,20 +440,30 @@ export const markNotificationsRead = markAllNotificationsRead;
 async function uploadImages(
   supabase: Awaited<ReturnType<typeof requireSupabase>>,
   userId: string,
-  values: FormDataEntryValue[],
-  folder = "posts",
+  values: Array<FormDataEntryValue | null>,
+  {
+    folder = "posts",
+    errorPath = "/compose",
+    maxFiles = 6,
+  }: {
+    folder?: string;
+    errorPath?: string;
+    maxFiles?: number;
+  } = {},
 ) {
   const files = values.filter((value): value is File => value instanceof File && value.size > 0);
 
-  if (files.length > 6) {
-    redirect("/compose?error=一次最多上传 6 张图片");
+  if (files.length > maxFiles) {
+    redirect(`${errorPath}?error=${encodeURIComponent(`一次最多上传 ${maxFiles} 张图片`)}`);
   }
 
   const uploaded: string[] = [];
 
   for (const file of files) {
     if (!ALLOWED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES) {
-      redirect("/compose?error=图片仅支持 JPG、PNG、WEBP、GIF，且不能超过 5MB");
+      redirect(
+        `${errorPath}?error=${encodeURIComponent("图片仅支持 JPG、PNG、WEBP、GIF，且不能超过 5MB")}`,
+      );
     }
 
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
@@ -433,7 +474,7 @@ async function uploadImages(
     });
 
     if (error) {
-      redirect(`/compose?error=${encodeURIComponent(error.message)}`);
+      redirect(`${errorPath}?error=${encodeURIComponent(getStorageErrorMessage(error.message))}`);
     }
 
     const { data } = supabase.storage.from("pet-media").getPublicUrl(path);
@@ -441,6 +482,52 @@ async function uploadImages(
   }
 
   return uploaded;
+}
+
+function getPetInput(formData: FormData, errorPath: string) {
+  const name = String(formData.get("name") ?? "").trim();
+  const species = String(formData.get("species") ?? "").trim() || "猫猫";
+  const breed = String(formData.get("breed") ?? "").trim() || null;
+  const birthday = String(formData.get("birthday") ?? "") || null;
+  const gender = String(formData.get("gender") ?? "").trim() || null;
+  const bio = String(formData.get("bio") ?? "").trim() || null;
+
+  if (!name) {
+    redirect(`${errorPath}?error=宠物名字不能为空`);
+  }
+
+  if (name.length > 40) {
+    redirect(`${errorPath}?error=宠物名字不能超过 40 个字`);
+  }
+
+  if (species.length > 24) {
+    redirect(`${errorPath}?error=物种不能超过 24 个字`);
+  }
+
+  if (breed && breed.length > 40) {
+    redirect(`${errorPath}?error=品种不能超过 40 个字`);
+  }
+
+  if (gender && gender.length > 20) {
+    redirect(`${errorPath}?error=性别不能超过 20 个字`);
+  }
+
+  if (bio && bio.length > 240) {
+    redirect(`${errorPath}?error=小故事不能超过 240 个字`);
+  }
+
+  if (birthday && Number.isNaN(Date.parse(birthday))) {
+    redirect(`${errorPath}?error=生日格式不正确`);
+  }
+
+  return {
+    name,
+    species,
+    breed,
+    birthday,
+    gender,
+    bio,
+  };
 }
 
 async function replacePostTopics(
@@ -674,12 +761,112 @@ async function getRequestOrigin() {
 }
 
 function getAuthErrorMessage(message: string) {
-  if (message.toLowerCase().includes("email not confirmed")) {
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    normalizedMessage.includes("email rate limit exceeded") ||
+    normalizedMessage.includes("over_email_send_rate_limit") ||
+    normalizedMessage.includes("rate limit")
+  ) {
+    return "注册邮件发送太频繁，请稍后再试。生产环境请在 Supabase 配置自定义 SMTP 以提高邮件发送额度。";
+  }
+
+  if (
+    normalizedMessage.includes("email address not authorized") ||
+    normalizedMessage.includes("email not authorized")
+  ) {
+    return "当前 Supabase 内置邮件服务只适合测试，无法发送到这个邮箱。请配置自定义 SMTP 后再开放注册。";
+  }
+
+  if (
+    normalizedMessage.includes("email signups are disabled") ||
+    normalizedMessage.includes("signups not allowed")
+  ) {
+    return "当前暂未开放邮箱注册，请在 Supabase 开启全局注册和 Email Provider 注册。";
+  }
+
+  if (normalizedMessage.includes("email not confirmed")) {
     return "邮箱还没有确认，请先打开注册邮件里的确认链接。";
   }
 
-  if (message.toLowerCase().includes("invalid login credentials")) {
+  if (normalizedMessage.includes("invalid login credentials")) {
     return "邮箱或密码不正确。";
+  }
+
+  return message;
+}
+
+function getDatabaseErrorMessage(message: string) {
+  const normalizedMessage = message.toLowerCase();
+
+  if (normalizedMessage.includes("profiles_username_key")) {
+    return "这个用户名已经被使用，请换一个。";
+  }
+
+  if (normalizedMessage.includes("violates row-level security policy")) {
+    return "当前登录状态无权执行这个操作，请重新登录后再试。";
+  }
+
+  if (normalizedMessage.includes("profiles_display_name_check")) {
+    return "昵称需要 1 到 40 个字。";
+  }
+
+  if (normalizedMessage.includes("profiles_username_check")) {
+    return "用户名只能包含小写字母、数字和下划线，长度 3 到 24 位。";
+  }
+
+  if (normalizedMessage.includes("profiles_bio_check")) {
+    return "简介不能超过 240 个字。";
+  }
+
+  if (normalizedMessage.includes("profiles_location_check")) {
+    return "城市不能超过 40 个字。";
+  }
+
+  if (normalizedMessage.includes("pets_name_check")) {
+    return "宠物名字需要 1 到 40 个字。";
+  }
+
+  if (normalizedMessage.includes("pets_species_check")) {
+    return "物种不能超过 24 个字。";
+  }
+
+  if (normalizedMessage.includes("pets_breed_check")) {
+    return "品种不能超过 40 个字。";
+  }
+
+  if (normalizedMessage.includes("pets_gender_check")) {
+    return "性别不能超过 20 个字。";
+  }
+
+  if (normalizedMessage.includes("pets_bio_check")) {
+    return "小故事不能超过 240 个字。";
+  }
+
+  if (normalizedMessage.includes("invalid input syntax for type date")) {
+    return "生日格式不正确。";
+  }
+
+  if (normalizedMessage.includes("foreign key")) {
+    return "账号资料还没有初始化完成，请刷新页面后再试。";
+  }
+
+  return message;
+}
+
+function getStorageErrorMessage(message: string) {
+  const normalizedMessage = message.toLowerCase();
+
+  if (normalizedMessage.includes("row-level security")) {
+    return "当前登录状态无权上传图片，请重新登录后再试。";
+  }
+
+  if (normalizedMessage.includes("payload") || normalizedMessage.includes("too large")) {
+    return "图片不能超过 5MB。";
+  }
+
+  if (normalizedMessage.includes("mime") || normalizedMessage.includes("content type")) {
+    return "图片仅支持 JPG、PNG、WEBP、GIF。";
   }
 
   return message;

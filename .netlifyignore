@@ -1,0 +1,11 @@
+.DS_Store
+.env
+.env*.local
+.git
+.netlify
+.next
+node_modules
+out
+dist
+coverage
+tsconfig.tsbuildinfo
