@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 :root {
+  --font-sans: "Avenir Next", "Segoe UI", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Avenir Next", "Segoe UI Rounded", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
   --background: 210 40% 98%;
   --foreground: 222 47% 16%;
   --card: 0 0% 100%;

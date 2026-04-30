@@ -4,8 +4,17 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, ImagePlus, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { Pet } from "@/lib/supabase/types";
+import { POST_TYPE_OPTIONS } from "@/lib/content";
+import type { Pet, PostType, Topic } from "@/lib/supabase/types";
 
 const MAX_IMAGES = 6;
 
@@ -23,10 +32,22 @@ export function ComposeForm({
   action,
   pets,
   error,
+  initialBody = "",
+  initialPetId = "none",
+  initialPostType = "daily",
+  initialTopics = [],
+  allowImages = true,
+  submitLabel = "发布动态",
 }: {
   action: (formData: FormData) => void | Promise<void>;
   pets: Pick<Pet, "id" | "name" | "species">[];
   error?: string;
+  initialBody?: string;
+  initialPetId?: string | null;
+  initialPostType?: PostType;
+  initialTopics?: Pick<Topic, "name">[];
+  allowImages?: boolean;
+  submitLabel?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const previewsRef = useRef<PreviewImage[]>([]);
@@ -94,14 +115,15 @@ export function ComposeForm({
   return (
     <form action={action} className="space-y-5 pt-5">
       <div className="space-y-2">
-        <label htmlFor="body" className="text-sm font-bold">
+        <Label htmlFor="body" className="text-sm font-bold">
           今天发生了什么？
-        </label>
+        </Label>
         <Textarea
           id="body"
           name="body"
           placeholder="比如：第一次乖乖洗澡，奖励了两块鸡胸肉。"
           required
+          defaultValue={initialBody}
           className="min-h-44 resize-y rounded-lg px-4 py-3 text-base leading-7"
         />
         <p className="text-xs leading-5 text-muted-foreground">
@@ -109,30 +131,67 @@ export function ComposeForm({
         </p>
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="petId" className="text-sm font-bold">
-          关联宠物
-        </label>
-        <select
-          id="petId"
-          name="petId"
-          className="h-11 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring"
-          defaultValue=""
-        >
-          <option value="">不关联宠物</option>
-          {pets.map((pet) => (
-            <option key={pet.id} value={pet.id}>
-              {pet.name} · {pet.species}
-            </option>
-          ))}
-        </select>
+      <div className="grid gap-4 sm:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="space-y-2">
+          <Label htmlFor="postType" className="text-sm font-bold">
+            内容类型
+          </Label>
+          <Select name="postType" defaultValue={initialPostType}>
+            <SelectTrigger id="postType" className="h-11 rounded-lg bg-card">
+              <SelectValue placeholder="选择类型" />
+            </SelectTrigger>
+            <SelectContent>
+              {POST_TYPE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label} · {option.description}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="topics" className="text-sm font-bold">
+            话题
+          </Label>
+          <input
+            id="topics"
+            name="topics"
+            defaultValue={initialTopics.map((topic) => topic.name).join("，")}
+            placeholder="新手养宠，今日饭量"
+            className="flex h-11 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          <p className="text-xs leading-5 text-muted-foreground">
+            最多 5 个，可以用逗号分隔，也可以在正文里写 #话题。
+          </p>
+        </div>
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="petId" className="text-sm font-bold">
+          关联宠物
+        </Label>
+        <Select name="petId" defaultValue={initialPetId ?? "none"}>
+          <SelectTrigger id="petId" className="h-11 rounded-lg bg-card">
+            <SelectValue placeholder="不关联宠物" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">不关联宠物</SelectItem>
+            {pets.map((pet) => (
+              <SelectItem key={pet.id} value={pet.id}>
+                {pet.name} · {pet.species}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {allowImages ? (
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <label htmlFor="images" className="text-sm font-bold">
+          <Label htmlFor="images" className="text-sm font-bold">
             添加照片
-          </label>
+          </Label>
           <span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold text-primary">
             {selectedCountText}
           </span>
@@ -167,14 +226,14 @@ export function ComposeForm({
           ))}
 
           {hasRoom ? (
-            <label
+            <Label
               htmlFor="images"
               className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-primary/30 bg-secondary/45 p-3 text-center text-primary transition duration-200 hover:-translate-y-0.5 hover:bg-secondary focus-within:ring-2 focus-within:ring-ring"
             >
               <ImagePlus className="h-7 w-7" aria-hidden />
               <span className="mt-2 text-sm font-bold">添加图片</span>
               <span className="mt-1 text-xs text-muted-foreground">支持多选</span>
-            </label>
+            </Label>
           ) : null}
         </div>
 
@@ -189,6 +248,11 @@ export function ComposeForm({
           className="sr-only"
         />
       </div>
+      ) : (
+        <div className="rounded-lg border border-dashed bg-muted/55 px-4 py-3 text-sm leading-6 text-muted-foreground">
+          动态编辑第一版保留原图片，只支持调整文字、类型、话题和关联宠物。
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {photoTips.map((tip) => (
@@ -214,7 +278,7 @@ export function ComposeForm({
         </p>
         <Button variant="accent" className="h-11 px-5">
           <Send className="h-4 w-4" aria-hidden />
-          发布动态
+          {submitLabel}
         </Button>
       </div>
     </form>

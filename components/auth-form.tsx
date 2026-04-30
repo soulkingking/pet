@@ -3,6 +3,7 @@ import { Camera, HeartHandshake, LockKeyhole, Mail, PawPrint, ShieldCheck, Spark
 import { signIn, signUp } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const loginHighlights = ["同步关注流", "继续发布动态", "管理宠物档案"];
 const registerHighlights = ["创建个人主页", "绑定猫猫狗狗", "加入宠友社区"];
@@ -82,36 +83,36 @@ export function AuthForm({
         <form action={isLogin ? signIn : signUp} className="mt-6 space-y-4">
             {!isLogin ? (
               <>
-                <label className="block space-y-2">
+                <Label className="block space-y-2">
                   <span className="text-sm font-bold">昵称</span>
                   <span className="relative block">
                     <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                     <Input name="displayName" placeholder="例如：Momo 铲屎官" required className="h-11 rounded-lg pl-10" />
                   </span>
-                </label>
-                <label className="block space-y-2">
+                </Label>
+                <Label className="block space-y-2">
                   <span className="text-sm font-bold">用户名</span>
                   <span className="relative block">
                     <PawPrint className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                     <Input name="username" placeholder="例如 momo_cat" required className="h-11 rounded-lg pl-10" />
                   </span>
-                </label>
+                </Label>
               </>
             ) : null}
-            <label className="block space-y-2">
+            <Label className="block space-y-2">
               <span className="text-sm font-bold">邮箱</span>
               <span className="relative block">
                 <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                 <Input name="email" type="email" placeholder="you@example.com" required className="h-11 rounded-lg pl-10" />
               </span>
-            </label>
-            <label className="block space-y-2">
+            </Label>
+            <Label className="block space-y-2">
               <span className="text-sm font-bold">密码</span>
               <span className="relative block">
                 <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                 <Input name="password" type="password" placeholder="至少 6 位" required minLength={6} className="h-11 rounded-lg pl-10" />
               </span>
-            </label>
+            </Label>
             {message ? (
               <p className="rounded-lg border border-accent/20 bg-accent/10 px-3 py-2 text-sm font-bold text-accent">
                 {message}

@@ -1,11 +1,17 @@
 import Link from "next/link";
-import { Cat, Globe2, LogOut, Plus, Search, Settings } from "lucide-react";
+import { Bell, Cat, Globe2, LogOut, Plus, Search, Settings } from "lucide-react";
 import { signOut } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/lib/supabase/types";
 
-export function SiteHeader({ profile }: { profile: Profile | null }) {
+export function SiteHeader({
+  profile,
+  unreadNotifications = 0,
+}: {
+  profile: Profile | null;
+  unreadNotifications?: number;
+}) {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/88 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
@@ -35,6 +41,14 @@ export function SiteHeader({ profile }: { profile: Profile | null }) {
                 <Link href="/compose">
                   <Plus className="h-4 w-4" aria-hidden />
                   发布
+                </Link>
+              </Button>
+              <Button asChild variant="ghost" size="icon" title="通知">
+                <Link href="/notifications" className="relative">
+                  <Bell className="h-4 w-4" aria-hidden />
+                  {unreadNotifications > 0 ? (
+                    <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-accent" />
+                  ) : null}
                 </Link>
               </Button>
               <Button asChild variant="ghost" size="icon" title="设置">

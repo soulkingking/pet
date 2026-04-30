@@ -1,22 +1,8 @@
 import type { Metadata } from "next";
-import { Nunito_Sans, Varela_Round } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { MobileNav } from "@/components/mobile-nav";
-import { getCurrentUserProfile } from "@/lib/queries";
-
-const nunitoSans = Nunito_Sans({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-const varelaRound = Varela_Round({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-heading",
-  display: "swap",
-});
+import { getCurrentUserProfile, getUnreadNotificationCount } from "@/lib/queries";
 
 export const metadata: Metadata = {
   title: "Petly 宠物社区",
@@ -28,16 +14,19 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const profile = await getCurrentUserProfile();
+  const [profile, unreadNotifications] = await Promise.all([
+    getCurrentUserProfile(),
+    getUnreadNotificationCount(),
+  ]);
 
   return (
     <html lang="zh-CN" data-scroll-behavior="smooth">
-      <body className={`${nunitoSans.variable} ${varelaRound.variable}`}>
-        <SiteHeader profile={profile} />
+      <body>
+        <SiteHeader profile={profile} unreadNotifications={unreadNotifications} />
         <main className="mx-auto min-h-[calc(100vh-72px)] w-full max-w-6xl px-4 pb-24 pt-6 sm:px-6 lg:pb-10">
           {children}
         </main>
-        <MobileNav />
+        <MobileNav unreadNotifications={unreadNotifications} />
       </body>
     </html>
   );

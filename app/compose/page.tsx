@@ -10,9 +10,9 @@ const promptIdeas = ["今天最想记住的瞬间", "吃饭、散步或睡觉的
 export default async function ComposePage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; topic?: string }>;
 }) {
-  const [{ error }, user] = await Promise.all([searchParams, getSessionUser()]);
+  const [{ error, topic }, user] = await Promise.all([searchParams, getSessionUser()]);
 
   if (!user) {
     redirect("/login");
@@ -35,7 +35,12 @@ export default async function ComposePage({
           </p>
         </CardHeader>
         <CardContent>
-          <ComposeForm action={createPost} pets={pets} error={error} />
+          <ComposeForm
+            action={createPost}
+            pets={pets}
+            error={error}
+            initialTopics={topic ? [{ name: topic }] : []}
+          />
         </CardContent>
       </Card>
 

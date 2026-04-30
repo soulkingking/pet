@@ -1,12 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Camera, Compass, Globe2, Heart, Plus, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { Camera, Globe2, Heart, Plus, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FeedTabs } from "@/components/feed-tabs";
 import { PostList } from "@/components/post-list";
-import { getFeed, getSessionUser } from "@/lib/queries";
+import { getFeed, getPopularTopics, getSessionUser } from "@/lib/queries";
 
-const topics = ["新手养宠", "今日饭量", "睡姿大赛", "出门散步", "毛孩子健康"];
+const fallbackTopics = [
+  { slug: "new-pet", name: "新手养宠", posts_count: 0 },
+  { slug: "daily-meal", name: "今日饭量", posts_count: 0 },
+  { slug: "sleeping-contest", name: "睡姿大赛", posts_count: 0 },
+  { slug: "walk-time", name: "出门散步", posts_count: 0 },
+  { slug: "pet-health", name: "毛孩子健康", posts_count: 0 },
+];
 
 const communityNotes = [
   { icon: Heart, title: "真实日常", text: "分享清楚的照片和背景，让每个故事更容易被理解。" },
@@ -20,7 +27,12 @@ export default async function Home({
 }) {
   const { tab } = await searchParams;
   const mode = tab === "following" ? "following" : "recommended";
-  const [posts, user] = await Promise.all([getFeed(mode), getSessionUser()]);
+  const [posts, user, popularTopics] = await Promise.all([
+    getFeed(mode),
+    getSessionUser(),
+    getPopularTopics(10),
+  ]);
+  const topics = popularTopics.length > 0 ? popularTopics : fallbackTopics;
 
   return (
     <div className="feed-grid grid gap-6 lg:items-start">
@@ -90,20 +102,7 @@ export default async function Home({
           </div>
         </section>
 
-        <nav className="grid grid-cols-2 gap-2 rounded-lg border bg-card/80 p-1 shadow-sm" aria-label="动态筛选">
-          <Button asChild variant={mode === "recommended" ? "default" : "ghost"} className="h-11">
-            <Link href="/" aria-current={mode === "recommended" ? "page" : undefined}>
-              <Compass className="h-4 w-4" aria-hidden />
-              推荐
-            </Link>
-          </Button>
-          <Button asChild variant={mode === "following" ? "default" : "ghost"} className="h-11">
-            <Link href="/?tab=following" aria-current={mode === "following" ? "page" : undefined}>
-              <Users className="h-4 w-4" aria-hidden />
-              关注
-            </Link>
-          </Button>
-        </nav>
+        <FeedTabs mode={mode} />
 
         <PostList
           posts={posts}
@@ -117,6 +116,7 @@ export default async function Home({
           emptyActionLabel="发布宠物日常"
           emptySecondaryHref={mode === "following" ? "/" : "/search"}
           emptySecondaryLabel={mode === "following" ? "去看推荐" : "搜索宠友"}
+          currentUserId={user?.id}
         />
       </section>
 
@@ -128,11 +128,11 @@ export default async function Home({
           <CardContent className="flex flex-wrap gap-2">
             {topics.map((topic) => (
               <Link
-                key={topic}
-                href={`/search?q=${encodeURIComponent(topic)}`}
+                key={topic.slug}
+                href={`/topics/${topic.slug}`}
                 className="rounded-md bg-secondary px-3 py-2 text-sm font-bold text-secondary-foreground transition duration-200 hover:-translate-y-0.5 hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
-                #{topic}
+                #{topic.name}
               </Link>
             ))}
           </CardContent>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createComment, deleteComment } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,7 +26,7 @@ export default async function PostDetailPage({
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <PostCard post={post} />
+      <PostCard post={post} currentUserId={user?.id} />
       <Card>
         <CardHeader>
           <CardTitle>评论</CardTitle>
@@ -37,12 +38,20 @@ export default async function PostDetailPage({
               <Button>发送评论</Button>
             </form>
           ) : (
-            <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
-              登录后可以参与评论。
-            </p>
+            <div className="flex flex-col gap-3 rounded-md bg-muted p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">登录后可以参与评论，向作者补充经验或提问。</p>
+              <Button asChild className="w-fit">
+                <Link href="/login">登录后评论</Link>
+              </Button>
+            </div>
           )}
 
           <div className="space-y-4">
+            {comments.length === 0 ? (
+              <p className="rounded-md border border-dashed bg-card px-4 py-6 text-center text-sm text-muted-foreground">
+                暂无评论，成为第一个回应的人。
+              </p>
+            ) : null}
             {comments.map((comment) => (
               <div key={comment.id} className="flex gap-3 border-t pt-4">
                 <Avatar>
@@ -56,9 +65,14 @@ export default async function PostDetailPage({
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-semibold">
-                      {comment.profiles?.display_name ?? "宠友"}
-                    </p>
+                    <div>
+                      <p className="font-semibold">
+                        {comment.profiles?.display_name ?? "宠友"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(comment.created_at).toLocaleString("zh-CN")}
+                      </p>
+                    </div>
                     {user?.id === comment.author_id ? (
                       <form action={deleteComment.bind(null, id, comment.id)}>
                         <Button variant="ghost" size="sm">删除</Button>

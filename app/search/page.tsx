@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Hash, Search } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { PetCard } from "@/components/pet-card";
 import { PostList } from "@/components/post-list";
@@ -47,6 +47,23 @@ export default async function SearchPage({
                       <p className="font-semibold">{profile.display_name}</p>
                       <p className="text-sm text-muted-foreground">@{profile.username}</p>
                     </div>
+                  </Link>
+                ))}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>话题</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-2">
+                {results.topics.map((topic) => (
+                  <Link
+                    key={topic.id}
+                    href={`/topics/${topic.slug}`}
+                    className="inline-flex items-center gap-1 rounded-md bg-secondary px-3 py-2 text-sm font-bold text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
+                  >
+                    <Hash className="h-4 w-4" aria-hidden />
+                    {topic.name}
                   </Link>
                 ))}
               </CardContent>

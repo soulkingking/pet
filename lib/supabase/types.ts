@@ -66,6 +66,7 @@ export type Database = {
           id: string;
           author_id: string;
           pet_id: string | null;
+          post_type: PostType;
           body: string;
           image_urls: string[];
           visibility: "public" | "followers";
@@ -76,6 +77,7 @@ export type Database = {
           id?: string;
           author_id: string;
           pet_id?: string | null;
+          post_type?: PostType;
           body: string;
           image_urls?: string[];
           visibility?: "public" | "followers";
@@ -153,6 +155,31 @@ export type Database = {
         };
         Update: Partial<Database["public"]["Tables"]["post_topics"]["Insert"]>;
       };
+      notifications: {
+        Row: {
+          id: string;
+          recipient_id: string;
+          actor_id: string;
+          type: NotificationType;
+          post_id: string | null;
+          comment_id: string | null;
+          read_at: string | null;
+          dedupe_key: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          recipient_id: string;
+          actor_id: string;
+          type: NotificationType;
+          post_id?: string | null;
+          comment_id?: string | null;
+          read_at?: string | null;
+          dedupe_key?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["notifications"]["Insert"]>;
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -161,7 +188,11 @@ export type Database = {
   };
 };
 
+export type PostType = "daily" | "question" | "guide" | "clinic" | "adoption";
+export type NotificationType = "like" | "comment" | "follow";
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type Pet = Database["public"]["Tables"]["pets"]["Row"];
 export type Post = Database["public"]["Tables"]["posts"]["Row"];
 export type Comment = Database["public"]["Tables"]["comments"]["Row"];
+export type Topic = Database["public"]["Tables"]["topics"]["Row"];
+export type Notification = Database["public"]["Tables"]["notifications"]["Row"];

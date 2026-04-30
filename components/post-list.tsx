@@ -10,6 +10,7 @@ export function PostList({
   emptyActionLabel,
   emptySecondaryHref,
   emptySecondaryLabel,
+  currentUserId,
 }: {
   posts: FeedPost[];
   emptyTitle?: string;
@@ -18,6 +19,7 @@ export function PostList({
   emptyActionLabel?: string;
   emptySecondaryHref?: string;
   emptySecondaryLabel?: string;
+  currentUserId?: string | null;
 }) {
   if (posts.length === 0) {
     return (
@@ -35,7 +37,7 @@ export function PostList({
   return (
     <div className="space-y-4">
       {posts.map((post) => (
-        <PostCard key={post.id} post={post} />
+        <PostCard key={post.id} post={post} currentUserId={currentUserId} />
       ))}
     </div>
   );

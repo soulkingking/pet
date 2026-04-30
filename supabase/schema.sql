@@ -29,12 +29,28 @@ create table if not exists public.posts (
   id uuid primary key default gen_random_uuid(),
   author_id uuid not null references public.profiles(id) on delete cascade,
   pet_id uuid references public.pets(id) on delete set null,
+  post_type text not null default 'daily' check (post_type in ('daily', 'question', 'guide', 'clinic', 'adoption')),
   body text not null check (char_length(body) between 2 and 1000),
   image_urls text[] not null default '{}',
   visibility text not null default 'public' check (visibility in ('public', 'followers')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.posts
+  add column if not exists post_type text not null default 'daily';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'posts_post_type_check'
+  ) then
+    alter table public.posts
+      add constraint posts_post_type_check
+      check (post_type in ('daily', 'question', 'guide', 'clinic', 'adoption'));
+  end if;
+end;
+$$;
 
 create table if not exists public.comments (
   id uuid primary key default gen_random_uuid(),
@@ -72,14 +88,40 @@ create table if not exists public.post_topics (
   primary key (post_id, topic_id)
 );
 
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  recipient_id uuid not null references public.profiles(id) on delete cascade,
+  actor_id uuid not null references public.profiles(id) on delete cascade,
+  type text not null check (type in ('like', 'comment', 'follow')),
+  post_id uuid references public.posts(id) on delete cascade,
+  comment_id uuid references public.comments(id) on delete cascade,
+  read_at timestamptz,
+  dedupe_key text unique,
+  created_at timestamptz not null default now(),
+  check (recipient_id <> actor_id)
+);
+
+alter table public.notifications
+  add column if not exists dedupe_key text;
+
+create unique index if not exists notifications_dedupe_key_idx
+  on public.notifications(dedupe_key)
+  where dedupe_key is not null;
+
 create index if not exists posts_author_created_idx on public.posts(author_id, created_at desc);
 create index if not exists posts_pet_created_idx on public.posts(pet_id, created_at desc);
+create index if not exists posts_type_created_idx on public.posts(post_type, created_at desc);
 create index if not exists pets_owner_created_idx on public.pets(owner_id, created_at desc);
 create index if not exists comments_post_created_idx on public.comments(post_id, created_at);
 create index if not exists comments_author_created_idx on public.comments(author_id, created_at desc);
 create index if not exists likes_user_created_idx on public.likes(user_id, created_at desc);
 create index if not exists follows_following_idx on public.follows(following_id);
 create index if not exists post_topics_topic_idx on public.post_topics(topic_id);
+create index if not exists notifications_recipient_created_idx on public.notifications(recipient_id, created_at desc);
+create index if not exists notifications_recipient_unread_idx on public.notifications(recipient_id, read_at) where read_at is null;
+create index if not exists notifications_actor_created_idx on public.notifications(actor_id, created_at desc);
+create index if not exists notifications_post_idx on public.notifications(post_id);
+create index if not exists notifications_comment_idx on public.notifications(comment_id);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -160,6 +202,7 @@ alter table public.likes enable row level security;
 alter table public.follows enable row level security;
 alter table public.topics enable row level security;
 alter table public.post_topics enable row level security;
+alter table public.notifications enable row level security;
 
 create policy "Profiles are public" on public.profiles for select using (true);
 create policy "Users insert own profile" on public.profiles for insert with check ((select auth.uid()) = id);
@@ -188,7 +231,41 @@ create policy "Users follow as self" on public.follows for insert with check ((s
 create policy "Users unfollow as self" on public.follows for delete using ((select auth.uid()) = follower_id);
 
 create policy "Topics are public" on public.topics for select using (true);
+create policy "Authenticated users create topics" on public.topics for insert with check ((select auth.uid()) is not null);
 create policy "Post topics are public" on public.post_topics for select using (true);
+create policy "Post authors insert post topics" on public.post_topics for insert with check (
+  exists (
+    select 1 from public.posts
+    where posts.id = post_topics.post_id
+      and posts.author_id = (select auth.uid())
+  )
+);
+create policy "Post authors delete post topics" on public.post_topics for delete using (
+  exists (
+    select 1 from public.posts
+    where posts.id = post_topics.post_id
+      and posts.author_id = (select auth.uid())
+  )
+);
+
+create policy "Users read own notifications" on public.notifications for select using ((select auth.uid()) = recipient_id);
+create policy "Users create notifications as actor" on public.notifications for insert with check (
+  (select auth.uid()) = actor_id and recipient_id <> actor_id
+);
+create policy "Users mark own notifications" on public.notifications for update using ((select auth.uid()) = recipient_id) with check ((select auth.uid()) = recipient_id);
+create policy "Users delete notifications they created" on public.notifications for delete using ((select auth.uid()) = actor_id);
+
+revoke update on public.notifications from authenticated;
+grant update (read_at) on public.notifications to authenticated;
+
+insert into public.topics (slug, name)
+values
+  ('new-pet', '新手养宠'),
+  ('daily-meal', '今日饭量'),
+  ('sleeping-contest', '睡姿大赛'),
+  ('walk-time', '出门散步'),
+  ('pet-health', '毛孩子健康')
+on conflict (slug) do nothing;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
